@@ -4,6 +4,19 @@ Get your Newstrackr app running in under 5 minutes!
 
 ## ⚡ Option 1: Automatic Setup (Recommended)
 
+### For Windows:
+```cmd
+# 1. Navigate to the project
+cd newstrackr
+
+# 2. Run the dependency installer
+python install_deps.py
+
+# 3. Start the app
+streamlit run app.py
+```
+
+### For Linux/Mac:
 ```bash
 # 1. Navigate to the project
 cd newstrackr

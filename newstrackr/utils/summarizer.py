@@ -3,11 +3,21 @@ News Summarizer using BART model
 Generates concise summaries of news articles (2 paragraphs, ~300 characters)
 """
 
-import torch
-from transformers import BartTokenizer, BartForConditionalGeneration
 import streamlit as st
 from functools import lru_cache
 import re
+
+# Try to import transformers, handle gracefully if not installed
+try:
+    import torch
+    from transformers import BartTokenizer, BartForConditionalGeneration
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    torch = None
+    BartTokenizer = None
+    BartForConditionalGeneration = None
+    TRANSFORMERS_AVAILABLE = False
+    print("Warning: transformers/torch not installed. Summarization will use fallback method.")
 
 class NewsSummarizer:
     def __init__(self):
@@ -19,6 +29,10 @@ class NewsSummarizer:
     @st.cache_resource
     def _load_model(_self):
         """Load BART model and tokenizer with caching"""
+        if not TRANSFORMERS_AVAILABLE:
+            print("Transformers not available, using fallback summarization")
+            return None, None
+            
         try:
             _self.tokenizer = BartTokenizer.from_pretrained(_self.model_name)
             _self.model = BartForConditionalGeneration.from_pretrained(_self.model_name)
@@ -57,8 +71,8 @@ class NewsSummarizer:
         Returns:
             str: Summarized text with source link
         """
-        if not self.model or not self.tokenizer:
-            return "Summary unavailable - model not loaded"
+        if not self.model or not self.tokenizer or not TRANSFORMERS_AVAILABLE:
+            return self._fallback_summarize(article_text, source_url)
         
         # Clean the input text
         clean_text = self.clean_text(article_text)
@@ -125,6 +139,39 @@ class NewsSummarizer:
         # Add source link if provided
         if source_url:
             formatted_summary += f"\n\n**Source:** [Read full article]({source_url})"
+        
+        return formatted_summary
+    
+    def _fallback_summarize(self, article_text, source_url):
+        """Fallback summarization when BART is not available"""
+        # Simple extractive summarization
+        sentences = article_text.split('.')
+        sentences = [s.strip() for s in sentences if len(s.strip()) > 20]
+        
+        # Take first 2-3 sentences and format
+        if len(sentences) >= 2:
+            summary = '. '.join(sentences[:2]) + '.'
+        else:
+            summary = article_text[:200] + "..."
+        
+        # Format into paragraphs
+        words = summary.split()
+        mid_point = len(words) // 2
+        paragraph1 = ' '.join(words[:mid_point])
+        paragraph2 = ' '.join(words[mid_point:])
+        
+        formatted_summary = f"{paragraph1}\n\n{paragraph2}"
+        
+        # Trim to ~300 characters
+        if len(formatted_summary) > 350:
+            formatted_summary = formatted_summary[:300] + "..."
+        
+        # Add source link
+        if source_url:
+            formatted_summary += f"\n\n**Source:** [Read full article]({source_url})"
+        
+        # Add note about fallback method
+        formatted_summary = "⚠️ *Using basic summarization (install transformers for AI summaries)*\n\n" + formatted_summary
         
         return formatted_summary
 

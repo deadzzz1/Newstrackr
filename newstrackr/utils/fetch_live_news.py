@@ -8,11 +8,19 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import streamlit as st
-from newsapi import NewsApiClient
 import random
 import time
 import joblib
 import os
+
+# Try to import NewsAPI, handle gracefully if not installed
+try:
+    from newsapi import NewsApiClient
+    NEWSAPI_AVAILABLE = True
+except ImportError:
+    NewsApiClient = None
+    NEWSAPI_AVAILABLE = False
+    print("Warning: newsapi-python not installed. Using sample data only.")
 
 class LiveNewsFetcher:
     def __init__(self, api_key=None):
@@ -24,8 +32,10 @@ class LiveNewsFetcher:
         """
         self.api_key = api_key
         self.newsapi = None
-        if api_key:
+        if api_key and NEWSAPI_AVAILABLE:
             self.newsapi = NewsApiClient(api_key=api_key)
+        elif api_key and not NEWSAPI_AVAILABLE:
+            print("Warning: NewsAPI key provided but newsapi-python not installed")
         
         # Load impact ranker model if available
         self.impact_model = None
@@ -177,8 +187,8 @@ class LiveNewsFetcher:
         Returns:
             list: List of news articles with metadata
         """
-        if not _self.newsapi:
-            # Return sample data if no API key
+        if not _self.newsapi or not NEWSAPI_AVAILABLE:
+            # Return sample data if no API key or NewsAPI not available
             return _self._get_sample_news(page_size)
         
         try:

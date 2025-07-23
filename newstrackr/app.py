@@ -187,6 +187,21 @@ def main():
     # Sidebar filters
     st.sidebar.markdown("## ⚙️ Configuration")
     
+    # Check for missing dependencies and show warnings
+    try:
+        from utils.fetch_live_news import NEWSAPI_AVAILABLE
+        from utils.summarizer import TRANSFORMERS_AVAILABLE
+        
+        if not NEWSAPI_AVAILABLE:
+            st.sidebar.warning("📦 NewsAPI not installed\n\nUsing sample data only")
+            st.sidebar.code("pip install newsapi-python")
+            
+        if not TRANSFORMERS_AVAILABLE:
+            st.sidebar.warning("🤖 AI models not installed\n\nUsing basic summarization")
+            st.sidebar.code("pip install transformers torch")
+    except:
+        pass
+    
     # API Key input
     api_key = st.sidebar.text_input(
         "NewsAPI Key (Optional)",
@@ -276,7 +291,26 @@ def main():
     
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
-        st.markdown("Please check your API key and try again, or contact support if the issue persists.")
+        
+        # Check for common import errors and provide helpful instructions
+        error_str = str(e).lower()
+        if "newsapi" in error_str:
+            st.error("**Missing Dependency: newsapi-python**")
+            st.code("pip install newsapi-python")
+            st.info("The app will work with sample data even without NewsAPI")
+            
+        elif "transformers" in error_str or "torch" in error_str:
+            st.error("**Missing Dependency: transformers/torch**")
+            st.code("pip install transformers torch")
+            st.info("Basic summarization will be used without these packages")
+            
+        elif "sklearn" in error_str or "scikit" in error_str:
+            st.error("**Missing Dependency: scikit-learn**")
+            st.code("pip install scikit-learn")
+            
+        else:
+            st.markdown("Please check your setup and try again, or run the setup script:")
+            st.code("python setup.py")
 
 if __name__ == "__main__":
     main()
